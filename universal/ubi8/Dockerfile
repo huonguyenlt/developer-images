@@ -34,23 +34,12 @@ RUN curl -fsSL "https://get.sdkman.io/?rcupdate=false" | bash \
              && sed -i "s/sdkman_auto_answer=false/sdkman_auto_answer=true/g" /home/tooling/.sdkman/etc/config \
 	     && sed -i "s/sdkman_auto_env=false/sdkman_auto_env=true/g" /home/tooling/.sdkman/etc/config \
              && sdk install java 8.0.402-tem \
-             && sdk install java 11.0.22-tem \
-             && sdk install java 17.0.10-tem \
-             && sdk install java 21.0.2-tem \
-             && sdk install java 23.1.2.r21-mandrel \
-             && sdk default java 17.0.10-tem \
              && sdk install gradle \
              && sdk install maven \
              && sdk install jbang \
              && sdk flush archives \
              && sdk flush temp" \
          && chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
-
-# sdk home java <version>
-ENV JAVA_HOME_8=/home/tooling/.sdkman/candidates/java/8.0.402-tem
-ENV JAVA_HOME_11=/home/tooling/.sdkman/candidates/java/11.0.22-tem
-ENV JAVA_HOME_17=/home/tooling/.sdkman/candidates/java/17.0.10-tem
-ENV JAVA_HOME_21=/home/tooling/.sdkman/candidates/java/21.0.2-tem
 
 # Java-related environment variables are described and set by ${PROFILE_EXT}, which will be loaded by ~/.bashrc
 # To make Java working for dash and other shells, it needs to initialize them in the Dockerfile.
@@ -61,7 +50,7 @@ ENV SDKMAN_PLATFORM="linuxx64"
 ENV SDKMAN_VERSION="5.18.2"
 
 ENV GRADLE_HOME="/home/tooling/.sdkman/candidates/gradle/current"
-ENV JAVA_HOME="/home/tooling/.sdkman/candidates/java/current"
+ENV JAVA_HOME="/home/tooling/.sdkman/candidates/java/8.0.402-tem"
 ENV MAVEN_HOME="/home/tooling/.sdkman/candidates/maven/current"
 
 ENV GRAALVM_HOME=/home/tooling/.sdkman/candidates/java/23.1.2.r21-mandrel
@@ -71,111 +60,6 @@ ENV PATH="/home/tooling/.sdkman/candidates/maven/current/bin:$PATH"
 ENV PATH="/home/tooling/.sdkman/candidates/java/current/bin:$PATH"
 ENV PATH="/home/tooling/.sdkman/candidates/gradle/current/bin:$PATH"
 ENV PATH="/home/tooling/.local/share/coursier/bin:$PATH"
-
-# NodeJS
-RUN mkdir -p /home/tooling/.nvm/
-ENV NVM_DIR="/home/tooling/.nvm"
-ENV NODEJS_20_VERSION=20.7.0
-ENV NODEJS_18_VERSION=18.19.1
-ENV NODEJS_DEFAULT_VERSION=${NODEJS_18_VERSION}
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | PROFILE=/dev/null bash
-RUN echo 'export NVM_DIR="$HOME/.nvm"' >> ${PROFILE_EXT} \
-    && echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ${PROFILE_EXT}
-RUN source /home/user/.bashrc && \
-    nvm install v${NODEJS_20_VERSION} && \
-    nvm install v${NODEJS_18_VERSION} && \
-    nvm alias default v${NODEJS_DEFAULT_VERSION} && nvm use v${NODEJS_DEFAULT_VERSION} && \
-    npm install --global yarn@v1.22.17 &&\
-    chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
-ENV PATH=$NVM_DIR/versions/node/v${NODEJS_DEFAULT_VERSION}/bin:$PATH
-ENV NODEJS_HOME_20=$NVM_DIR/versions/node/v${NODEJS_20_VERSION}
-ENV NODEJS_HOME_18=$NVM_DIR/versions/node/v${NODEJS_18_VERSION}
-
-# kube
-ENV KUBECONFIG=/home/user/.kube/config
-
-USER 0
-
-# Required packages for AWT
-RUN dnf install -y libXext libXrender libXtst libXi
-
-# Lombok
-ENV LOMBOK_VERSION=1.18.18
-RUN wget -O /usr/local/lib/lombok.jar https://projectlombok.org/downloads/lombok-${LOMBOK_VERSION}.jar
-
-# Scala
-RUN curl -fLo cs https://git.io/coursier-cli && \
-    chmod +x cs && \
-    mv cs /usr/local/bin/
-RUN curl -fLo sbt https://raw.githubusercontent.com/dwijnand/sbt-extras/master/sbt && \
-    chmod +x sbt && \
-    mv sbt /usr/local/bin/
-RUN curl -fLo mill https://raw.githubusercontent.com/lefou/millw/main/millw && \
-    chmod +x mill && \
-    mv mill /usr/local/bin/
-
-# C/CPP
-RUN dnf -y install llvm-toolset gcc gcc-c++ clang clang-libs clang-tools-extra gdb
-
-# Go 1.18+    - installed to /usr/bin/go
-# gopls 0.10+ - installed to /home/tooling/go/bin/gopls and /home/tooling/go/pkg/mod/
-RUN dnf install -y go-toolset && \
-    GO111MODULE=on go install -v golang.org/x/tools/gopls@latest && \
-    chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
-ENV GOBIN="/home/tooling/go/bin/"
-ENV PATH="$GOBIN:$PATH"
-
-# Python
-RUN dnf -y install python3.11 python3.11-devel python3.11-setuptools python3.11-pip nss_wrapper
-
-RUN cd /usr/bin \
-    && if [ ! -L python ]; then ln -s python3.11 python; fi \
-    && if [ ! -L pydoc ]; then ln -s pydoc3.11 pydoc; fi \
-    && if [ ! -L python-config ]; then ln -s python3.11-config python-config; fi \
-    && if [ ! -L pip ]; then ln -s pip-3.11 pip; fi
-
-RUN pip install pylint yq
-
-# PHP
-ENV PHP_VERSION=7.4
-RUN dnf -y module enable php:$PHP_VERSION && \
-    dnf install -y --setopt=tsflags=nodocs php php-mysqlnd php-pgsql php-bcmath \
-                php-gd php-intl php-json php-ldap php-mbstring php-pdo \
-                php-pear php-zlib php-mysqli php-curl php-xml php-devel\
-                php-process php-soap php-opcache php-fpm ca-certificates \
-                php-gmp php-pecl-xdebug php-pecl-zip mod_ssl hostname && \
-    wget https://getcomposer.org/installer -O /tmp/composer-installer.php && \
-    php /tmp/composer-installer.php --filename=composer --install-dir=/usr/local/bin
-
-ENV PHP_DEFAULT_INCLUDE_PATH=/usr/share/pear \
-    PHP_SYSCONF_PATH=/etc \
-    PHP_HTTPD_CONF_FILE=php.conf \
-    HTTPD_MAIN_CONF_PATH=/etc/httpd/conf \
-    HTTPD_MAIN_CONF_D_PATH=/etc/httpd/conf.d \
-    HTTPD_MODULES_CONF_D_PATH=/etc/httpd/conf.modules.d \
-    HTTPD_VAR_RUN=/var/run/httpd \
-    HTTPD_DATA_PATH=/var/www \
-    HTTPD_DATA_ORIG_PATH=/var/www \
-    HTTPD_VAR_PATH=/var
-
-# .NET
-ENV DOTNET_RPM_VERSION=8.0
-RUN dnf install -y dotnet-hostfxr-${DOTNET_RPM_VERSION} dotnet-runtime-${DOTNET_RPM_VERSION} dotnet-sdk-${DOTNET_RPM_VERSION}
-
-# rust
-ENV CARGO_HOME=/home/tooling/.cargo \
-    RUSTUP_HOME=/home/tooling/.rustup \
-    PATH=/home/tooling/.cargo/bin:${PATH}
-RUN curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
-    chmod +x rustup && \
-    mv rustup /usr/bin/ && \
-    rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls && \
-    chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
-
-# camel-k
-ENV KAMEL_VERSION 2.2.0
-RUN curl -L https://github.com/apache/camel-k/releases/download/v${KAMEL_VERSION}/camel-k-client-${KAMEL_VERSION}-linux-amd64.tar.gz | tar -C /usr/local/bin -xz --no-same-owner \
-    && chmod +x /usr/local/bin/kamel
 
 # Config directories
 RUN mkdir -p /home/tooling/.m2 && \
@@ -189,40 +73,11 @@ RUN mkdir -p /home/tooling/.m2 && \
     chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
 
 # Cloud
-
-# oc client
-ENV OC_VERSION=4.15
-RUN curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz | tar -C /usr/local/bin -xz --no-same-owner \
-    && chmod +x /usr/local/bin/oc
-
-# OS Pipelines CLI (tkn)
-ENV TKN_VERSION=1.14.0
-RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/pipelines/${TKN_VERSION}/tkn-linux-amd64.tar.gz | tar -C /usr/local/bin -xz --no-same-owner \
-    && chmod +x /usr/local/bin/tkn /usr/local/bin/opc /usr/local/bin/tkn-pac
  
 RUN echo 'alias docker=podman' >> ${PROFILE_EXT}
 
 # Configure container engine
 COPY --chown=0:0 containers.conf /etc/containers/containers.conf
-
-ENV K8S_VERSION=1.28
-## kubectl
-RUN <<EOF
-set -euf -o pipefail
-
-cat <<EOF2 > /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/
-enabled=1
-gpgcheck=1
-gpgkey=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/repodata/repomd.xml.key
-EOF2
-
-dnf install -y kubectl
-curl -sSL -o ~/.kubectl_aliases https://raw.githubusercontent.com/ahmetb/kubectl-alias/master/.kubectl_aliases
-echo '[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases' >> ${PROFILE_EXT}
-EOF
 
 ## shellcheck
 RUN <<EOF
@@ -240,135 +95,6 @@ mv "${TEMP_DIR}"/shellcheck-v${SHELL_CHECK_VERSION}/shellcheck /bin/shellcheck
 cd -
 rm -rf "${TEMP_DIR}"
 EOF
-
-## krew
-RUN <<EOF
-set -euf -o pipefail
-TEMP_DIR="$(mktemp -d)"
-cd "${TEMP_DIR}"
-KREW_VERSION="0.4.2"
-KREW_ARCH="linux_amd64"
-KREW_TGZ="krew-${KREW_ARCH}.tar.gz"
-KREW_TGZ_URL="https://github.com/kubernetes-sigs/krew/releases/download/v${KREW_VERSION}/${KREW_TGZ}"
-curl -sSLO "${KREW_TGZ_URL}"
-curl -sSLO "${KREW_TGZ_URL}.sha256"
-
-# File ${KREW_TGZ_URL}.sha256 has invalid format to be checked with sha256sum.
-# It needs to create a valid one.
-echo "$(cat ${KREW_TGZ}.sha256)  ${KREW_TGZ}" > "${KREW_TGZ}.sha256"
-
-sha256sum -c "${KREW_TGZ}.sha256" 2>&1 | grep OK
-
-tar -zxv --no-same-owner -f "${KREW_TGZ}"
-./"krew-${KREW_ARCH}" install krew
-echo 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >> ${PROFILE_EXT}
-export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-# kubens and kubectx
-kubectl krew install ns
-kubectl krew install ctx
-cd -
-rm -rf "${TEMP_DIR}"
-EOF
-
-## helm
-RUN <<EOF
-set -euf -o pipefail
-TEMP_DIR="$(mktemp -d)"
-cd "${TEMP_DIR}"
-HELM_VERSION="3.14.3"
-HELM_ARCH="linux-amd64"
-HELM_TGZ="helm-v${HELM_VERSION}-${HELM_ARCH}.tar.gz"
-HELM_TGZ_URL="https://get.helm.sh/${HELM_TGZ}"
-curl -sSLO "${HELM_TGZ_URL}"
-curl -sSLO "${HELM_TGZ_URL}.sha256sum"
-sha256sum -c "${HELM_TGZ}.sha256sum" 2>&1 | grep OK
-tar -zxv --no-same-owner -f "${HELM_TGZ}"
-mv "${HELM_ARCH}"/helm /usr/local/bin/helm
-cd -
-rm -rf "${TEMP_DIR}"
-EOF
-
-## kustomize
-RUN <<EOF
-set -euf -o pipefail
-TEMP_DIR="$(mktemp -d)"
-cd "${TEMP_DIR}"
-KUSTOMIZE_VERSION="5.3.0"
-KUSTOMIZE_ARCH="linux_amd64"
-KUSTOMIZE_TGZ="kustomize_v${KUSTOMIZE_VERSION}_${KUSTOMIZE_ARCH}.tar.gz"
-KUSTOMIZE_TGZ_URL="https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/${KUSTOMIZE_TGZ}"
-KUSTOMIZE_CHEKSUMS_URL="https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/checksums.txt"
-curl -sSLO "${KUSTOMIZE_TGZ_URL}"
-curl -sSLO "${KUSTOMIZE_CHEKSUMS_URL}"
-sha256sum --ignore-missing -c "checksums.txt" 2>&1 | grep OK
-tar -zxv --no-same-owner -f "${KUSTOMIZE_TGZ}"
-mv kustomize /usr/local/bin/
-cd -
-rm -rf "${TEMP_DIR}"
-EOF
-
-## tektoncd-cli
-RUN <<EOF
-set -euf -o pipefail
-TEMP_DIR="$(mktemp -d)"
-cd "${TEMP_DIR}"
-TKN_VERSION="0.20.0"
-TKN_ARCH="Linux_x86_64"
-TKN_TGZ="tkn_${TKN_VERSION}_${TKN_ARCH}.tar.gz"
-TKN_TGZ_URL="https://github.com/tektoncd/cli/releases/download/v${TKN_VERSION}/${TKN_TGZ}"
-TKN_CHEKSUMS_URL="https://github.com/tektoncd/cli/releases/download/v${TKN_VERSION}/checksums.txt"
-curl -sSLO "${TKN_TGZ_URL}"
-curl -sSLO "${TKN_CHEKSUMS_URL}"
-sha256sum --ignore-missing -c "checksums.txt" 2>&1 | grep OK
-tar -zxv --no-same-owner -f "${TKN_TGZ}"
-mv tkn /usr/local/bin/
-cd -
-rm -rf "${TEMP_DIR}"
-EOF
-
-## knative-cli
-RUN <<EOF
-set -euf -o pipefail
-TEMP_DIR="$(mktemp -d)"
-cd "${TEMP_DIR}"
-KN_VERSION="1.13.0"
-KN_ARCH="linux-amd64"
-KN_BIN="kn-${KN_ARCH}"
-KN_BIN_URL="https://github.com/knative/client/releases/download/knative-v${KN_VERSION}/${KN_BIN}"
-KN_CHEKSUMS_URL="https://github.com/knative/client/releases/download/knative-v${KN_VERSION}/checksums.txt"
-curl -sSLO "${KN_BIN_URL}"
-curl -sSLO "${KN_CHEKSUMS_URL}"
-sha256sum --ignore-missing -c "checksums.txt" 2>&1 | grep OK
-mv "${KN_BIN}" kn
-chmod +x kn
-mv kn /usr/local/bin
-cd -
-rm -rf "${TEMP_DIR}"
-EOF
-
-## terraform-cli
-RUN <<EOF
-set -euf -o pipefail
-TEMP_DIR="$(mktemp -d)"
-cd "${TEMP_DIR}"
-TF_VERSION="1.7.5"
-TF_ARCH="linux_amd64"
-TF_ZIP="terraform_${TF_VERSION}_${TF_ARCH}.zip"
-TF_ZIP_URL="https://releases.hashicorp.com/terraform/${TF_VERSION}/${TF_ZIP}"
-TF_CHEKSUMS_URL="https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_SHA256SUMS"
-curl -sSLO "${TF_ZIP_URL}"
-curl -sSLO "${TF_CHEKSUMS_URL}"
-sha256sum --ignore-missing -c "terraform_${TF_VERSION}_SHA256SUMS" 2>&1 | grep OK
-unzip ${TF_ZIP}
-chmod +x terraform
-mv terraform /usr/local/bin
-cd -
-rm -rf "${TEMP_DIR}"
-EOF
-
-## skaffold
-RUN curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
-    install skaffold /usr/local/bin/
 
 # e2fsprogs setup
 # Since e2fsprogs-static package has removed RHEL 8 distribution, it is not possible to install from the repository
