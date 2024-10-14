@@ -33,7 +33,7 @@ RUN curl -fsSL "https://get.sdkman.io/?rcupdate=false" | bash \
     && bash -c ". /home/tooling/.sdkman/bin/sdkman-init.sh \
              && sed -i "s/sdkman_auto_answer=false/sdkman_auto_answer=true/g" /home/tooling/.sdkman/etc/config \
 	     && sed -i "s/sdkman_auto_env=false/sdkman_auto_env=true/g" /home/tooling/.sdkman/etc/config \
-             && sdk install java 11.0.22-tem \
+             && sdk install java 17.0.10-tem \
              && sdk install gradle \
              && sdk install maven \
              && sdk install jbang \
