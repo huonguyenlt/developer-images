@@ -52,6 +52,7 @@ RUN mkdir -p /home/tooling/.m2 && \
 # Cloud
 
 # Configure container engine
+RUN echo 'alias docker=podman' >> ${PROFILE_EXT}
 COPY --chown=0:0 containers.conf /etc/containers/containers.conf
 
 # Create symbolic links from /home/tooling/ -> /home/user/
